@@ -44,7 +44,7 @@ getHostInfo()
 .then(hostInfo => {
   host = hostInfo
   const port = process.env.PORT || 3000
-  app.listen(port, () => console.log(`jbaas service started on port ${port}`))
+  app.listen(port, () => console.log(`jpaas service started on port ${port}`))
 })
 
 function shutdown() {
