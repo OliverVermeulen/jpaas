@@ -1,3 +1,3 @@
-# JBaaS: Jeff Bezos as a Service
+# JPaaS: Jack Parow as a Service
 
 Random quotes from Jeff Bezos
