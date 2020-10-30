@@ -1,16 +1,16 @@
 'use strict'
 
-// require('@google/cloud-trace').start({samplingRate: 500})
-// require('@google/cloud-debug')
-
-const Promise = require('bluebird')
 const express = require('express')
-const {exec} = require('child_process')
 const quotes = require('./quotes')
-const fs = Promise.promisifyAll(require('fs'))
+const fs = require('fs')
+const exec = require('child-process-promise').exec;
+
+async function getVersion() {
+  let version = await fs.promises.readFile(`${__dirname}/../VERSION.txt`, 'utf8')
+  return version.trim()
+}
 
 const app = express()
-const versionPromise = fs.readFileAsync(`${__dirname}/../VERSION.txt`, 'utf8').then(ver => ver.trim())
 
 let running = true
 let host = ''
@@ -20,22 +20,24 @@ app.use('/', (req, res, next) => {
   next()
 })
 
-app.route('/health').get((req, res) => res.status(running ? 200 : 500).send(running ? 'ok' : 'not ok'))
-app.route('/version').get((req, res) => versionPromise.then((version) => res.send(version)))
+app.route('/health').get((req, res) => {
+  res.status(running ? 200 : 500).send(running ? 'ok' : 'not ok')
+})
+app.route('/version').get(async (req, res) => {
+  let version = await getVersion()
+  res.send(version)
+})
 
-app.use('/', (req, res) => {
-  Promise.all([
-    versionPromise,
-    Promise.delay(20)
-  ])
-  .then(([version]) => {
-    let quote = quotes[Math.floor(Math.random() * quotes.length)]
-    let {trim} = req.query
+app.use('/', async (req, res) => {
+  let version = await getVersion()
+  let quote = quotes[Math.floor(Math.random() * quotes.length)]
+  let {trim} = req.query
 
-    if (trim) quote = `${quote.slice(0, trim)}...`
+  if (trim) {
+    quote = `${quote.slice(0, trim)}...`
+  }
 
-    res.json({ host, quote, version })
-  })
+  res.json({ host, quote, version })
 })
 
 process.on('SIGINT', shutdown)
@@ -56,8 +58,8 @@ function shutdown() {
   }, 1000)
 }
 
-function getHostInfo() {
-  // const cmd = '/sbin/ifconfig eth0 | grep \'inet addr:\' | cut -d: -f2 | awk \'{ print $1}\''
-  const cmd = 'hostname'
-  return Promise.fromCallback(cb => exec(cmd, cb)).then(info => info.trim().slice(-5))
+async function getHostInfo() {
+  let child = exec('hostname')
+  let resp = await child
+  return resp.stdout.trim()
 }
